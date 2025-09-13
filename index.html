@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>鳥巢AI包娜娜 - 圖像生成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "react-dropzone": "https://aistudiocdn.com/react-dropzone@^14.3.8",
+    "fabric": "https://aistudiocdn.com/fabric@^6.7.1"
+  }
+}
+</script>
+<style>
+  /* --- Cyberpunk Theme --- */
+  body.cyber-bg {
+    font-family: 'Orbitron', 'sans-serif';
+    background-color: #0c0c0c;
+    position: relative;
+  }
+
+  body.cyber-bg::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, rgba(255, 0, 255, 0.1), transparent 70%);
+    animation: breatheGlow 8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  body.cyber-bg .themed-text-glow {
+    color: white;
+    text-shadow: 0 0 5px rgba(255,255,255,0.7), 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #f0f;
+  }
+  
+  body.cyber-bg .themed-button {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #0ff;
+    background: linear-gradient(90deg, rgba(255,0,255,0.6), rgba(0,255,255,0.6));
+    color: white;
+    text-shadow: 0 0 3px black;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 3px #0ff, inset 0 0 5px rgba(0,255,255,0.5);
+    animation: buttonBreathe 8s ease-in-out infinite alternate;
+  }
+  
+  body.cyber-bg .themed-button:hover {
+    box-shadow: 0 0 15px #0ff, inset 0 0 10px rgba(255,255,255,0.5);
+    transform: translateY(-2px);
+    border-color: #fff;
+  }
+  
+  body.cyber-bg .themed-button-shine::after, body.cyber-bg .themed-active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: shine 6s linear infinite;
+    transform: skewX(-25deg);
+    pointer-events: none;
+  }
+  
+  body.cyber-bg .themed-button-secondary {
+    background: transparent;
+    border: 1px solid #f0f;
+    box-shadow: 0 0 5px #f0f, inset 0 0 5px rgba(255,0,255,0.2);
+  }
+  body.cyber-bg .themed-button-secondary:hover {
+    box-shadow: 0 0 15px #f0f, inset 0 0 10px rgba(255,0,255,0.4);
+    background: rgba(255,0,255,0.1);
+  }
+  
+  body.cyber-bg .themed-active {
+    box-shadow: 0 0 20px #0ff, inset 0 0 15px #0ff !important;
+    border-color: #fff !important;
+    background: linear-gradient(90deg, rgba(0,255,255,0.8), rgba(255,0,255,0.8));
+    position: relative;
+    overflow: hidden;
+  }
+  
+  body.cyber-bg .themed-panel {
+    background-color: rgba(10, 20, 30, 0.4);
+    border: 1px solid #0ff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  body.cyber-bg .themed-item-selected {
+    box-shadow: 0 0 15px #0ff;
+    border: 2px solid #0ff;
+  }
+
+  body.cyber-bg ::-webkit-scrollbar { width: 8px; height: 8px; }
+  body.cyber-bg ::-webkit-scrollbar-track { background: #0a141e; }
+  body.cyber-bg ::-webkit-scrollbar-thumb { background: #0ff; border-radius: 4px; box-shadow: 0 0 5px #0ff; }
+  body.cyber-bg ::-webkit-scrollbar-thumb:hover { background: #f0f; box-shadow: 0 0 5px #f0f; }
+  
+  /* --- Corner Glow Effect --- */
+  body.cyber-bg .cyber-glow-corners {
+    position: relative;
+  }
+
+  body.cyber-bg .cyber-glow-corners::before,
+  body.cyber-bg .cyber-glow-corners::after {
+    content: '';
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    animation: corner-glow-breathe 4s ease-in-out infinite;
+    z-index: 1;
+  }
+
+  body.cyber-bg .cyber-glow-corners::before {
+    top: -2px;
+    left: -2px;
+    background-color: #0ff;
+    box-shadow: 0 0 8px 2px #0ff, 0 0 15px 5px rgba(0, 255, 255, 0.5);
+  }
+
+  body.cyber-bg .cyber-glow-corners::after {
+    bottom: -2px;
+    right: -2px;
+    background-color: #f0f;
+    box-shadow: 0 0 8px 2px #f0f, 0 0 15px 5px rgba(255, 0, 255, 0.5);
+    animation-delay: -2s;
+  }
+  
+  /* --- Main Content Area Glow --- */
+  body.cyber-bg .main-content-area {
+    overflow: hidden; /* To contain the glow */
+  }
+
+  body.cyber-bg .main-content-area::before,
+  body.cyber-bg .main-content-area::after {
+      content: '';
+      position: absolute;
+      z-index: 0; /* Behind the content */
+      border-radius: 50%;
+      pointer-events: none;
+      animation: large-glow-breathe 10s ease-in-out infinite;
+      filter: blur(75px);
+  }
+
+  body.cyber-bg .main-content-area::before {
+      top: -25%;
+      left: -25%;
+      width: 80%;
+      height: 80%;
+      background: radial-gradient(circle, rgba(0, 255, 255, 0.1) 0%, transparent 60%);
+      animation-delay: 0s;
+  }
+
+  body.cyber-bg .main-content-area::after {
+      bottom: -25%;
+      right: -25%;
+      width: 80%;
+      height: 80%;
+      background: radial-gradient(circle, rgba(255, 0, 255, 0.1) 0%, transparent 60%);
+      animation-delay: -5s;
+  }
+
+  /* --- NCL Loading Animation --- */
+  body.cyber-bg .ncl-loading-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 10;
+    font-family: 'Orbitron', sans-serif;
+    overflow: hidden;
+  }
+
+  body.cyber-bg .ncl-loading-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #0ff, transparent);
+    animation: scanline 3s linear infinite;
+  }
+
+  body.cyber-bg .ncl-loading-text {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 
+      0 0 5px #0ff,
+      0 0 10px #0ff,
+      0 0 20px #0ff,
+      0 0 40px #f0f,
+      0 0 80px #f0f;
+    position: relative;
+    animation: text-flicker 4s linear infinite;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  body.cyber-bg .ncl-loading-text::before,
+  body.cyber-bg .ncl-loading-text::after {
+    content: '幻夢製造中......';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 1rem;
+  }
+
+  body.cyber-bg .ncl-loading-text::before {
+    left: 2px;
+    text-shadow: -1px 0 red;
+    animation: glitch-1 2s linear infinite reverse;
+  }
+
+  body.cyber-bg .ncl-loading-text::after {
+    left: -2px;
+    text-shadow: -1px 0 blue;
+    animation: glitch-2 2s linear infinite reverse;
+  }
+  
+
+  @keyframes breatheGlow {
+    0%, 100% { transform: scale(1.2); opacity: 0.15; }
+    50% { transform: scale(1.6); opacity: 0.25; }
+  }
+  @keyframes shine {
+    100% { left: 150%; }
+  }
+  @keyframes buttonBreathe {
+      from { box-shadow: 0 0 3px #f0f, inset 0 0 5px rgba(255,0,255,0.5); border-color: #f0f; }
+      to { box-shadow: 0 0 8px #0ff, inset 0 0 8px rgba(0,255,255,0.5); border-color: #0ff; }
+  }
+  @keyframes corner-glow-breathe {
+    0%, 100% { transform: scale(0.8); opacity: 0.7; }
+    50% { transform: scale(1.2); opacity: 1; }
+  }
+  @keyframes large-glow-breathe {
+      0%, 100% {
+          transform: scale(0.9);
+          opacity: 0.6;
+      }
+      50% {
+          transform: scale(1.2);
+          opacity: 1;
+      }
+  }
+  @keyframes scanline {
+    0% { transform: translateY(-10px); }
+    100% { transform: translateY(100vh); }
+  }
+  @keyframes text-flicker {
+    0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% {
+      opacity: 0.99;
+    }
+    20%, 21.9%, 63%, 63.9%, 65%, 69.9% {
+      opacity: 0.4;
+    }
+  }
+  @keyframes glitch-1 {
+    0% { clip-path: inset(0 0 0 0); }
+    25% { clip-path: inset(8% 0 90% 0); }
+    50% { clip-path: inset(45% 0 47% 0); }
+    75% { clip-path: inset(90% 0 4% 0); }
+    100% { clip-path: inset(60% 0 35% 0); }
+  }
+  @keyframes glitch-2 {
+    0% { clip-path: inset(0 0 0 0); }
+    25% { clip-path: inset(85% 0 5% 0); }
+    50% { clip-path: inset(15% 0 75% 0); }
+    75% { clip-path: inset(95% 0 2% 0); }
+    100% { clip-path: inset(55% 0 33% 0); }
+  }
+  
+  /* --- Shared Styles --- */
+  .themed-button:disabled {
+    background: #222 !important;
+    border-color: #444 !important;
+    color: #777 !important;
+    box-shadow: none !important;
+    animation: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+  }
+
+  /* --- Desktop Font Size Increase --- */
+  @media (min-width: 1024px) {
+    html {
+      font-size: 18px; /* Default is 16px, this is ~2pt increase for better readability on desktop */
+    }
+  }
+
+  /* --- Classic Theme --- */
+  body.classic-bg {
+    font-family: 'Inter', 'sans-serif';
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  body.classic-bg .themed-panel {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  body.classic-bg .themed-text-glow {
+    color: #00bfff;
+    text-shadow: none;
+  }
+
+  body.classic-bg .themed-button {
+    border: 1px solid #555;
+    background: #3c3c3c;
+    color: #f0f0f0;
+    text-shadow: none;
+    box-shadow: none;
+    animation: none;
+    transition: all 0.2s ease;
+  }
+
+  body.classic-bg .themed-button:hover {
+    background: #4a4a4a;
+    border-color: #777;
+    transform: none;
+  }
+
+  body.classic-bg .themed-button::after {
+    display: none;
+  }
+
+  body.classic-bg .themed-button-secondary {
+    background: transparent;
+    border-color: #555;
+  }
+
+  body.classic-bg .themed-button-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  body.classic-bg .themed-active {
+    border-color: #00bfff !important;
+    background: #00bfff !important;
+    color: #1a1a1a !important;
+    font-weight: 600;
+    box-shadow: none !important;
+  }
+
+  body.classic-bg .themed-active::after {
+    display: none;
+  }
+
+  body.classic-bg .themed-item-selected {
+    border: 2px solid #00bfff;
+    box-shadow: none;
+  }
+
+  body.classic-bg ::-webkit-scrollbar { width: 8px; height: 8px; }
+  body.classic-bg ::-webkit-scrollbar-track { background: #222; }
+  body.classic-bg ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+  body.classic-bg ::-webkit-scrollbar-thumb:hover { background: #777; }
+</style>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

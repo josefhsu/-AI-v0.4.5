@@ -1,0 +1,7 @@
+{
+  "name": "鳥巢AI包娜娜 v0.4.5",
+  "description": "手機版，一款由 Gemini 驅動的 AI 圖像生成和編輯應用程式。上傳圖片、提供提示，即可創造全新的視覺作品。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
